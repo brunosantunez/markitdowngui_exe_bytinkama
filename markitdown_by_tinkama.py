@@ -13,6 +13,7 @@ from PIL import Image
 from pypdf import PdfReader
 
 
+LIMITE_AVISO_BYTES = 5 * 1024 * 1024
 LIMITE_PESO_BYTES = 50 * 1024 * 1024
 LIMITE_PAGINAS_PDF = 800
 URL_CONVERSOR_ONLINE = "https://convertio.co/es/pdf-txt/"
@@ -36,7 +37,7 @@ class ConvertidorApp(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
 
-        self.title("MarkItDown · By Tinkama")
+        self.title("MarkItDown · by Tinkama")
         self.geometry("1020x700")
         self.minsize(900, 640)
         self.configure(fg_color=COLOR_FONDO)
@@ -92,13 +93,13 @@ class ConvertidorApp(ctk.CTk):
 
         ctk.CTkLabel(
             barra,
-            text="MARKITDOWN",
+            text="Tinkama · Converter",
             font=ctk.CTkFont(family="Segoe UI", size=21, weight="bold"),
             text_color=COLOR_TEXTO,
         ).grid(row=1, column=0, padx=24, pady=(0, 4))
         ctk.CTkLabel(
             barra,
-            text="CONVERTIDOR · TINKAMA",
+            text="MarkitDown Microsoft®",
             font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
             text_color=COLOR_ACENTO,
         ).grid(row=2, column=0, padx=24, pady=(0, 24))
@@ -115,7 +116,7 @@ class ConvertidorApp(ctk.CTk):
         ).grid(row=4, column=0, sticky="sw", padx=24, pady=(18, 8))
         ctk.CTkLabel(
             barra,
-            text="Tus documentos se procesan en este equipo. Elige Markdown para conservar estructura o TXT para texto plano.",
+            text="Adjunta los archivos que quieras convertir y elige el formato de salida, estos archivos se procesaran localmente. \n\nSi el archivo es muy grande o extenso, se recomienda usar la opción de conversión online. Herramienta brindada por Microsoft®.",
             font=ctk.CTkFont(family="Segoe UI", size=12),
             text_color=COLOR_TEXTO_SECUNDARIO,
             wraplength=215,
@@ -151,7 +152,7 @@ class ConvertidorApp(ctk.CTk):
         ).grid(row=0, column=0, sticky="ew", pady=(4, 6))
         ctk.CTkLabel(
             panel,
-            text="Pasa PDF, Word, Excel, PowerPoint y más a un formato sencillo de reutilizar.",
+            text="Sube PDF, Word, Excel, PowerPoint, etc. y convertilo a texto plano sencillo para ahorrar tokens en tu ia.",
             font=ctk.CTkFont(family="Segoe UI", size=13),
             text_color=COLOR_TEXTO_SECUNDARIO,
             anchor="w",
@@ -284,11 +285,12 @@ class ConvertidorApp(ctk.CTk):
         self.lbl_detalle_archivo.configure(text=detalle, text_color=COLOR_TEXTO_SECUNDARIO)
         self.lbl_estado.configure(text="Archivo listo. Elige el formato y convierte.")
 
-        if peso_bytes > LIMITE_PESO_BYTES:
+        if peso_bytes > LIMITE_AVISO_BYTES:
             messagebox.showwarning(
-                "Archivo de más de 50 MB",
-                "Este archivo puede tardar bastante o consumir mucha memoria. "
-                "Te recomendamos usar «Convertir Online» antes de procesarlo localmente.",
+                "Archivo de más de 5 MB",
+                "Este archivo pesa más de 5 MB y podría no convertirse correctamente. "
+                "Se intentará convertirlo de forma local cuando pulses «Convertir y guardar…», "
+                "pero se recomienda usar «Convertir Online».",
                 parent=self,
             )
 
@@ -306,8 +308,7 @@ class ConvertidorApp(ctk.CTk):
         if peso_bytes > LIMITE_PESO_BYTES:
             confirmacion = messagebox.askyesno(
                 "Confirmar conversión local",
-                "El archivo supera los 50 MB. Para evitar esperas largas, se recomienda «Convertir Online».\n\n"
-                "¿Quieres intentar la conversión local de todos modos?",
+                "El archivo supera los 50 MB. Para evitar esperas largas, se recomienda «Convertir Online».\n\n",
                 parent=self,
             )
             if not confirmacion:
@@ -378,6 +379,10 @@ class ConvertidorApp(ctk.CTk):
                     return
 
             resultado = MarkItDown().convert(ruta_entrada)
+            if not resultado.text_content or not resultado.text_content.strip():
+                self.resultados_conversion.put(("vacio", "MarkItDown no extrajo contenido del archivo."))
+                return
+
             with open(ruta_salida, "w", encoding="utf-8") as archivo_salida:
                 archivo_salida.write(resultado.text_content)
             self.resultados_conversion.put(("exito", ruta_salida))
@@ -409,6 +414,13 @@ class ConvertidorApp(ctk.CTk):
             messagebox.showwarning(
                 "PDF demasiado extenso",
                 f"{detalle}\n\nUsa «Convertir Online» para este documento.",
+                parent=self,
+            )
+        elif estado == "vacio":
+            self.lbl_estado.configure(text="No se encontró contenido para guardar.")
+            messagebox.showwarning(
+                "Conversión sin contenido",
+                f"{detalle}\n\nNo se guardó un archivo vacío. Prueba con «Convertir Online».",
                 parent=self,
             )
         else:

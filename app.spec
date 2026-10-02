@@ -1,19 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+datas = [("icon.ico", "."), ("icon.png", ".")]
 binaries = []
 hiddenimports = []
-tmp_ret = collect_all('customtkinter')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-tmp_ret = collect_all('magika')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-tmp_ret = collect_all('markitdown')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
+for package in ("customtkinter", "magika", "markitdown"):
+    package_datas, package_binaries, package_hiddenimports = collect_all(package)
+    datas += package_datas
+    binaries += package_binaries
+    hiddenimports += package_hiddenimports
 
 a = Analysis(
-    ['app.py'],
+    ["markitdown_by_tinkama.py"],
     pathex=[],
     binaries=binaries,
     datas=datas,
@@ -33,7 +32,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='app',
+    name="markitdowngui",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -46,4 +45,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon="icon.ico",
 )

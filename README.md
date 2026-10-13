@@ -3,11 +3,11 @@
 Aplicación de escritorio para Windows que convierte documentos a Markdown (`.md`) o texto plano (`.txt`) con el motor MarkItDown de Microsoft. Su principal función es para ahorrar tokens en su ia preferida.
 
 # Modo de uso
-Puedes descargar directamente el archivo `MiD_Tinkama.zip` que está en funcionamiento directo sin necesidad de realizar los pasos para generar el ejecutable. No es necesario ejecutar como administrador. Funciona como una GUI para usuarios no experimentados.
-![Update](https://img.shields.io/badge/Update_v1.1-verde):Puedes seleccionar varios archivos a la vez para convertirlos directamente de una pasada, los mismos se almacenarán en la carpeta que seleccionaste.
+Puedes descargar directamente el archivo `MiD_Tinkama.zip` que está en funcionamiento directo sin necesidad de realizar los pasos para generar el ejecutable. No es necesario ejecutar como administrador. Funciona como una GUI para usuarios no experimentados.\
+![Update](https://img.shields.io/badge/Update_v1.1-verde) Puedes seleccionar varios archivos a la vez para convertirlos directamente de una pasada, los mismos se almacenarán en la carpeta que seleccionaste.
 
 ## Disclaimer
-Microsoft Defender SmartScreen puede advertir sobre este ejecutable porque es una compilación reciente, sin firma digital, el mismo archivo generado existe en el repositorio `markitdown_by_tinkama.py` por si desean comprobarlo.
+Microsoft Defender SmartScreen puede advertir sobre este ejecutable porque es una compilación reciente, sin firma digital, el mismo archivo generado existe en el repositorio `markitdown_by_tinkama.py` por si desean comprobarlo.\
 `SHA-256: 1048A48BF11FD2EA382AEA3DB1B24848C7334CBDF9FEDA9C80AC4EAC79ADC6A0`
 
 # Pasos para generar el ejecutable
@@ -51,11 +51,11 @@ Es un complemento totalmente atribuido y basado en la herramienta de MarkItDown 
 A Windows desktop application that converts documents to Markdown (`.md`) or plain text (`.txt`) using Microsoft's MarkItDown engine. Its main function is to save tokens on your preferred AI.
 
 # Usage
-You can directly download the `MiD_Tinkama.zip` file, which is ready to run without needing to perform the steps to generate the executable yourself. Running as administrator is not required. It serves as a GUI for non-technical users.
-![Update](https://img.shields.io/badge/Update_v1.1-verde):You can select multiple files at once to convert them directly in a single pass; they will be saved in the folder you selected.
+You can directly download the `MiD_Tinkama.zip` file, which is ready to run without needing to perform the steps to generate the executable yourself. Running as administrator is not required. It serves as a GUI for non-technical users.\
+![Update](https://img.shields.io/badge/Update_v1.1-verde) You can select multiple files at once to convert them directly in a single pass; they will be saved in the folder you selected.
 
 ## Disclaimer
-Microsoft Defender SmartScreen may flag this executable because it is a recent, unsigned build; the same generated file exists in the `markitdown_by_tinkama.py` repository, should you wish to verify it.
+Microsoft Defender SmartScreen may flag this executable because it is a recent, unsigned build; the same generated file exists in the `markitdown_by_tinkama.py` repository, should you wish to verify it.\
 `SHA-256: 1048A48BF11FD2EA382AEA3DB1B24848C7334CBDF9FEDA9C80AC4EAC79ADC6A0`
 
 # Steps to generate the executable

@@ -1,0 +1,14 @@
+MarkItDown GUI · by Tinkama(brunosantunez)
+Aplicación de escritorio para Windows que convierte documentos a Markdown (.md) o 
+texto plano (.txt) con el motor MarkItDown de Microsoft. 
+Su principal función es para ahorrar tokens y agilizar la lectura en su ia preferida.
+
+Funciona como una GUI para usuarios no experimentados.
+No es necesario ejecutar como administrador. 
+Microsoft Defender SmartScreen puede advertir sobre este ejecutable porque es una 
+compilación reciente, sin firma digital, ejecuten de todas formas.
+(Es de codigo abierto, abajo enlace a github).
+Puedes seleccionar varios archivos para convertirlos de una sola vez.
+
+Repo:
+https://github.com/brunosantunez/markitdowngui_exe_bytinkama

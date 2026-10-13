@@ -42,8 +42,10 @@ class ConvertidorApp(ctk.CTk):
         self.minsize(900, 640)
         self.configure(fg_color=COLOR_FONDO)
 
-        self.archivo_seleccionado: str | None = None
-        self.resultados_conversion: queue.Queue[tuple[str, str]] = queue.Queue()
+        self.archivos_seleccionados: tuple[str, ...] = ()
+        self.resultados_conversion: queue.Queue[tuple[str, str, str]] = queue.Queue()
+        self.resultados_lote: list[tuple[str, str, str]] = []
+        self.total_archivos_lote = 0
         self.icono_ventana: ctk.CTkImage | None = None
 
         self._configurar_icono()
@@ -172,7 +174,7 @@ class ConvertidorApp(ctk.CTk):
 
         self.lbl_archivo = ctk.CTkLabel(
             self.zona_archivo,
-            text="Selecciona el archivo que quieres convertir",
+            text="Selecciona los archivos que quieres convertir",
             font=ctk.CTkFont(family="Segoe UI", size=18, weight="bold"),
             text_color=COLOR_TEXTO,
         )
@@ -187,7 +189,7 @@ class ConvertidorApp(ctk.CTk):
 
         self.btn_adjuntar = ctk.CTkButton(
             self.zona_archivo,
-            text="Adjuntar archivo",
+            text="Adjuntar archivos",
             command=self.seleccionar_archivo,
             height=40,
             width=170,
@@ -259,177 +261,220 @@ class ConvertidorApp(ctk.CTk):
         self.lbl_estado.grid(row=5, column=0, sticky="w", pady=(4, 0))
 
     def seleccionar_archivo(self) -> None:
-        ruta_archivo = filedialog.askopenfilename(
-            title="Adjunta un archivo para convertir",
+        rutas_archivos = filedialog.askopenfilenames(
+            title="Adjunta los archivos para convertir",
             filetypes=[("Todos los archivos", "*.*")],
         )
-        if ruta_archivo:
-            self._seleccionar_ruta(ruta_archivo)
+        if not rutas_archivos:
+            return
 
-    def _seleccionar_ruta(self, ruta_archivo: str) -> None:
-        if not os.path.isfile(ruta_archivo):
+        rutas_validas = tuple(ruta for ruta in rutas_archivos if os.path.isfile(ruta))
+        if len(rutas_validas) != len(rutas_archivos):
             messagebox.showerror(
                 "Archivo no válido",
-                "No se encontró el archivo seleccionado.",
+                "Uno o más archivos seleccionados ya no están disponibles.",
                 parent=self,
             )
             return
 
-        self.archivo_seleccionado = ruta_archivo
-        nombre = os.path.basename(ruta_archivo)
-        peso_bytes = os.path.getsize(ruta_archivo)
-        peso_mb = peso_bytes / (1024 * 1024)
-        detalle = f"{nombre} · {peso_mb:.1f} MB" if peso_bytes >= 1024 * 1024 else nombre
-
-        self.lbl_archivo.configure(text=nombre, text_color=COLOR_TEXTO)
+        self.archivos_seleccionados = rutas_validas
+        nombres = [os.path.basename(ruta) for ruta in rutas_validas]
+        detalle = " · ".join(nombres[:3])
+        if len(nombres) > 3:
+            detalle = f"{detalle} · y {len(nombres) - 3} más"
+        self.lbl_archivo.configure(
+            text=f"{len(rutas_validas)} archivo(s) seleccionado(s)",
+            text_color=COLOR_TEXTO,
+        )
         self.lbl_detalle_archivo.configure(text=detalle, text_color=COLOR_TEXTO_SECUNDARIO)
-        self.lbl_estado.configure(text="Archivo listo. Elige el formato y convierte.")
+        self.lbl_estado.configure(text="Elige el formato y convierte la tanda.")
 
-        if peso_bytes > LIMITE_AVISO_BYTES:
+        archivos_grandes = [
+            os.path.basename(ruta)
+            for ruta in rutas_validas
+            if os.path.getsize(ruta) > LIMITE_AVISO_BYTES
+        ]
+        if archivos_grandes:
             messagebox.showwarning(
                 "Archivo de más de 5 MB",
-                "Este archivo pesa más de 5 MB y podría no convertirse correctamente. "
-                "Se intentará convertirlo de forma local cuando pulses «Convertir y guardar…», "
-                "pero se recomienda usar «Convertir Online».",
+                f"{len(archivos_grandes)} archivo(s) superan los 5 MB y podrían no convertirse correctamente. "
+                "Se intentarán convertir localmente, pero se recomienda usar «Convertir Online» para esos archivos.",
                 parent=self,
             )
 
     def convertir_archivo(self) -> None:
-        if not self.archivo_seleccionado:
+        if not self.archivos_seleccionados:
             messagebox.showwarning(
                 "Falta un archivo",
-                "Adjunta un archivo antes de convertirlo.",
+                "Adjunta uno o más archivos antes de convertirlos.",
                 parent=self,
             )
             return
 
-        ruta_entrada = self.archivo_seleccionado
-        peso_bytes = os.path.getsize(ruta_entrada)
-        if peso_bytes > LIMITE_PESO_BYTES:
+        rutas_entrada = self.archivos_seleccionados
+        archivos_mayores = [
+            os.path.basename(ruta)
+            for ruta in rutas_entrada
+            if os.path.getsize(ruta) > LIMITE_PESO_BYTES
+        ]
+        if archivos_mayores:
             confirmacion = messagebox.askyesno(
                 "Confirmar conversión local",
-                "El archivo supera los 50 MB. Para evitar esperas largas, se recomienda «Convertir Online».\n\n",
+                f"{len(archivos_mayores)} archivo(s) superan los 50 MB. Para evitar esperas largas, "
+                "se recomienda «Convertir Online». ¿Quieres continuar con la tanda local?",
                 parent=self,
             )
             if not confirmacion:
                 return
 
         extension = self.combo_formato.get()
-        nombre_base = Path(ruta_entrada).stem
-        ruta_salida = filedialog.asksaveasfilename(
-            title="Guardar archivo convertido",
-            initialfile=f"{nombre_base}{extension}",
-            defaultextension=extension,
-            filetypes=[(f"Archivo {extension}", f"*{extension}"), ("Todos los archivos", "*.*")],
+        carpeta_salida = filedialog.askdirectory(
+            title="Elige la carpeta para guardar los archivos convertidos",
+            mustexist=True,
         )
-        if not ruta_salida:
+        if not carpeta_salida:
             return
 
-        salida = Path(ruta_salida)
-        if salida.suffix.lower() != extension:
-            salida = salida.with_suffix(extension)
-            ruta_salida = str(salida)
-            if os.path.exists(ruta_salida) and not messagebox.askyesno(
-                "Confirmar reemplazo",
-                f"Ya existe un archivo en esta ubicación:\n{ruta_salida}\n\n¿Quieres reemplazarlo?",
-                parent=self,
-            ):
-                return
-
-        ruta_entrada_normalizada = os.path.normcase(os.path.abspath(ruta_entrada))
-        ruta_salida_normalizada = os.path.normcase(os.path.abspath(ruta_salida))
-        if ruta_entrada_normalizada == ruta_salida_normalizada:
+        rutas_salida = tuple(
+            str(Path(carpeta_salida) / f"{Path(ruta).stem}{extension}")
+            for ruta in rutas_entrada
+        )
+        rutas_salida_normalizadas = [
+            os.path.normcase(os.path.abspath(ruta)) for ruta in rutas_salida
+        ]
+        if len(set(rutas_salida_normalizadas)) != len(rutas_salida_normalizadas):
             messagebox.showwarning(
-                "Elige otra ubicación",
-                "El archivo convertido no puede reemplazar al archivo original.",
+                "Nombres de salida duplicados",
+                "Varios archivos seleccionados generarían el mismo nombre de salida. "
+                "Elige archivos con nombres distintos o conviértelos en tandas separadas.",
                 parent=self,
             )
             return
 
-        self._iniciar_conversion(ruta_entrada, ruta_salida)
+        rutas_entrada_normalizadas = {
+            os.path.normcase(os.path.abspath(ruta)) for ruta in rutas_entrada
+        }
+        if any(ruta in rutas_entrada_normalizadas for ruta in rutas_salida_normalizadas):
+            messagebox.showwarning(
+                "Elige otra carpeta",
+                "Un archivo convertido coincidiría con uno de los archivos originales. "
+                "Elige una carpeta distinta para proteger los archivos fuente.",
+                parent=self,
+            )
+            return
 
-    def _iniciar_conversion(self, ruta_entrada: str, ruta_salida: str) -> None:
+        rutas_existentes = [ruta for ruta in rutas_salida if os.path.exists(ruta)]
+        if rutas_existentes and not messagebox.askyesno(
+            "Confirmar reemplazo",
+            f"Ya existen {len(rutas_existentes)} archivo(s) en la carpeta elegida. "
+            "¿Quieres reemplazar esos archivos?",
+            parent=self,
+        ):
+            return
+
+        tareas = tuple(zip(rutas_entrada, rutas_salida))
+        self._iniciar_conversion(tareas)
+
+    def _iniciar_conversion(self, tareas: tuple[tuple[str, str], ...]) -> None:
+        self.resultados_lote = []
+        self.total_archivos_lote = len(tareas)
         self.btn_convertir.configure(state="disabled", text="Convirtiendo…")
         self.btn_adjuntar.configure(state="disabled")
         self.combo_formato.configure(state="disabled")
-        self.lbl_estado.configure(text="Procesando el archivo. Puedes seguir usando Windows…")
+        self.lbl_estado.configure(text=f"Procesando 1 de {self.total_archivos_lote}…")
         self.barra_progreso.grid(row=6, column=0, sticky="ew", pady=(11, 0))
         self.barra_progreso.start()
 
         hilo = threading.Thread(
             target=self._convertir_en_segundo_plano,
-            args=(ruta_entrada, ruta_salida),
+            args=(tareas,),
             daemon=True,
         )
         hilo.start()
         self.after(150, self._revisar_resultado)
 
-    def _convertir_en_segundo_plano(self, ruta_entrada: str, ruta_salida: str) -> None:
-        try:
-            if Path(ruta_entrada).suffix.lower() == ".pdf":
-                cantidad_paginas = len(PdfReader(ruta_entrada).pages)
-                if cantidad_paginas > LIMITE_PAGINAS_PDF:
-                    self.resultados_conversion.put(
-                        (
-                            "pdf_extenso",
-                            f"El PDF tiene {cantidad_paginas} páginas. El límite preventivo para la conversión local es "
-                            f"{LIMITE_PAGINAS_PDF} páginas.",
+    def _convertir_en_segundo_plano(
+        self,
+        tareas: tuple[tuple[str, str], ...],
+    ) -> None:
+        for ruta_entrada, ruta_salida in tareas:
+            try:
+                if Path(ruta_entrada).suffix.lower() == ".pdf":
+                    cantidad_paginas = len(PdfReader(ruta_entrada).pages)
+                    if cantidad_paginas > LIMITE_PAGINAS_PDF:
+                        self.resultados_conversion.put(
+                            (
+                                ruta_entrada,
+                                "pdf_extenso",
+                                f"Tiene {cantidad_paginas} páginas; el límite local es {LIMITE_PAGINAS_PDF}.",
+                            )
                         )
+                        continue
+
+                resultado = MarkItDown().convert(ruta_entrada)
+                if not resultado.text_content or not resultado.text_content.strip():
+                    self.resultados_conversion.put(
+                        (ruta_entrada, "vacio", "MarkItDown no extrajo contenido.")
                     )
-                    return
+                    continue
 
-            resultado = MarkItDown().convert(ruta_entrada)
-            if not resultado.text_content or not resultado.text_content.strip():
-                self.resultados_conversion.put(("vacio", "MarkItDown no extrajo contenido del archivo."))
-                return
+                with open(ruta_salida, "w", encoding="utf-8") as archivo_salida:
+                    archivo_salida.write(resultado.text_content)
+                self.resultados_conversion.put((ruta_entrada, "exito", ruta_salida))
+            except Exception as error:
+                self.resultados_conversion.put((ruta_entrada, "error", str(error)))
 
-            with open(ruta_salida, "w", encoding="utf-8") as archivo_salida:
-                archivo_salida.write(resultado.text_content)
-            self.resultados_conversion.put(("exito", ruta_salida))
-        except Exception as error:
-            self.resultados_conversion.put(("error", str(error)))
+        self.resultados_conversion.put(("", "finalizado", ""))
 
     def _revisar_resultado(self) -> None:
         try:
-            estado, detalle = self.resultados_conversion.get_nowait()
+            ruta_archivo, estado, detalle = self.resultados_conversion.get_nowait()
         except queue.Empty:
             self.after(150, self._revisar_resultado)
             return
 
+        if estado == "finalizado":
+            self._finalizar_lote()
+            return
+
+        self.resultados_lote.append((ruta_archivo, estado, detalle))
+        procesados = len(self.resultados_lote)
+        self.lbl_estado.configure(
+            text=f"Procesados {procesados} de {self.total_archivos_lote} archivos…"
+        )
+        self.after(150, self._revisar_resultado)
+
+    def _finalizar_lote(self) -> None:
         self.barra_progreso.stop()
         self.barra_progreso.grid_remove()
         self.btn_convertir.configure(state="normal", text="Convertir y guardar…")
         self.btn_adjuntar.configure(state="normal")
         self.combo_formato.configure(state="readonly")
 
-        if estado == "exito":
-            self.lbl_estado.configure(text="Conversión terminada correctamente.")
-            messagebox.showinfo(
-                "Conversión completada",
-                f"El archivo se guardó en:\n{detalle}",
-                parent=self,
+        exitos = [
+            os.path.basename(ruta)
+            for ruta, estado, _ in self.resultados_lote
+            if estado == "exito"
+        ]
+        fallidos = [
+            f"{os.path.basename(ruta)}: {detalle}"
+            for ruta, estado, detalle in self.resultados_lote
+            if estado != "exito"
+        ]
+        resumen = f"Archivos convertidos correctamente: {len(exitos)} de {self.total_archivos_lote}."
+        if exitos:
+            resumen += "\n\nConvertidos:\n" + "\n".join(exitos)
+        if fallidos:
+            resumen += "\n\nNo convertidos:\n" + "\n".join(fallidos)
+
+        if fallidos:
+            self.lbl_estado.configure(
+                text=f"Tanda terminada: {len(exitos)} de {self.total_archivos_lote} convertidos."
             )
-        elif estado == "pdf_extenso":
-            self.lbl_estado.configure(text="El PDF supera el límite preventivo de páginas.")
-            messagebox.showwarning(
-                "PDF demasiado extenso",
-                f"{detalle}\n\nUsa «Convertir Online» para este documento.",
-                parent=self,
-            )
-        elif estado == "vacio":
-            self.lbl_estado.configure(text="No se encontró contenido para guardar.")
-            messagebox.showwarning(
-                "Conversión sin contenido",
-                f"{detalle}\n\nNo se guardó un archivo vacío. Prueba con «Convertir Online».",
-                parent=self,
-            )
+            messagebox.showwarning("Tanda de conversión finalizada", resumen, parent=self)
         else:
-            self.lbl_estado.configure(text="No se pudo completar la conversión.")
-            messagebox.showerror(
-                "Error de conversión",
-                f"No se pudo convertir el archivo.\n\nDetalle: {detalle}",
-                parent=self,
-            )
+            self.lbl_estado.configure(text="Todos los archivos se convirtieron correctamente.")
+            messagebox.showinfo("Tanda de conversión completada", resumen, parent=self)
 
     @staticmethod
     def abrir_convertio() -> None:

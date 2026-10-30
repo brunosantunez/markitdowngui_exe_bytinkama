@@ -46,6 +46,10 @@ python -m PyInstaller --noconfirm --clean --distpath . --workpath build app.spec
 ## Contributing
 Es un complemento totalmente atribuido y basado en la herramienta de MarkItDown de Microsoft https://github.com/microsoft/markitdown 
 
+## Licencia
+
+El código de este proyecto se distribuye bajo la licencia MIT. Consulta [LICENSE](LICENSE). Las dependencias incluidas en el ejecutable conservan sus respectivas licencias.
+
 # MarkItDown GUI · by Tinkama
 
 A Windows desktop application that converts documents to Markdown (`.md`) or plain text (`.txt`) using Microsoft's MarkItDown engine. Its main function is to save tokens on your preferred AI.
@@ -93,3 +97,7 @@ python -m PyInstaller --noconfirm --clean --distpath . --workpath build app.spec
 
 ## Contributing
 This is a plugin fully based on—and attributed to—Microsoft's MarkItDown tool (https://github.com/microsoft/markitdown).
+
+## License
+
+This project's code is distributed under the MIT License. See [LICENSE](LICENSE). Dependencies bundled in the executable retain their respective licenses.
